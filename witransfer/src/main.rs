@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 /// Welcome to `WiTransfer`
 #[derive(Parser)]
@@ -7,14 +7,25 @@ use clap::Parser;
 #[command(version, long_about = None)]
 #[command(propagate_version  = true)]
 struct Cli {
-    /// The pattern to look for
-    pattern: String,
-    /// The path to the file to read
-    path: std::path::PathBuf
+    #[command(subcommand)]
+    command: Commands
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Discover,
+    Send {
+        path: std::path::PathBuf
+    }
 }
 
 fn main() {
     let args = Cli::parse();
 
-    println!("pattern: {:?}, path: {:?}", args.pattern, args.path)
+    match &args.command {
+        Commands::Discover => {
+            println!("Discovering...")
+        },
+        _ => println!("Doing something else.")
+    }
 }
