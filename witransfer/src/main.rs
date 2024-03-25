@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use witransfer::discover;
+use num_cpus;
 
 #[derive(Parser)]
 #[command(name = "WiTransfer")]
@@ -21,7 +22,8 @@ enum Commands {
     },
     Send {
         path: std::path::PathBuf
-    }
+    },
+    Cores,
 }
 fn main() {
     let args = Cli::parse();
@@ -31,6 +33,9 @@ fn main() {
             println!("Discovering... on port -> {port}");
             discover(*port)
         },
+        Commands::Cores => {
+            println!("This machines has {} cores/threads.", {num_cpus::get()})
+        }
         _ => println!("Doing something else.")
     }
 }
