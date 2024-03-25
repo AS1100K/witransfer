@@ -1,17 +1,19 @@
 use std::net::{IpAddr, SocketAddr, UdpSocket};
 use serde::{Serialize, Deserialize};
+use log::info;
+use serde::{Deserialize, Serialize};
 use serde_json;
-use whoami;
+use std::net::{IpAddr, SocketAddr, UdpSocket};
 use std::thread::sleep;
 use std::time::Duration;
-use log::info;
+use whoami;
 
 #[derive(Serialize, Deserialize)]
 struct Message<'a> {
     identifier: &'a str,
     device_info: DeviceInfo,
     ip_addr: IpAddr,
-    max_threads: usize
+    max_threads: usize,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,12 +33,20 @@ impl<'a> Message<'a> {
 
 /// Sends broadcast message for visibility.
 ///
+/// `port` is of type `u16` which will determine on which port messages are sent and received.
+///
 /// # Example
 ///
 /// ```rust
 /// use witransfer::networking::discover;
-/// discover(54321)
+///
+/// let port: u16 = 54321;
+/// discover(port)
 /// ```
+///
+/// # Panics
+///
+/// The function will panic if it encounters error with Socket or sending visibility message.
 pub fn discover(port: u16) {
     let message = Message {
         identifier: "WiTransfer",
@@ -45,10 +55,10 @@ pub fn discover(port: u16) {
             user_name: whoami::username(),
             device_name: whoami::devicename(),
             platform: whoami::platform().to_string(),
-            distro: whoami::distro()
+            distro: whoami::distro(),
         },
         ip_addr: local_ip_address::local_ip().unwrap(),
-        max_threads: num_cpus::get()
+        max_threads: num_cpus::get(),
     };
 
     loop {
@@ -60,14 +70,16 @@ pub fn discover(port: u16) {
 fn send_visibility_message(port: u16, message: &Message) {
     let broadcast_addr = SocketAddr::new(IpAddr::V4("255.255.255.255".parse().unwrap()), port);
     let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind to socket");
-    socket.set_broadcast(true).expect("Failed to set broadcast option.");
+    socket
+        .set_broadcast(true)
+        .expect("Failed to set broadcast option.");
 
     let send_buf = socket.send_to(&message.as_bytes(), broadcast_addr);
 
     match send_buf {
         Ok(buf) => {
             info!("Sent packet size: {}", buf);
-        },
-        Err(e) => panic!("{}", e)
+        }
+        Err(e) => panic!("{}", e),
     }
 }

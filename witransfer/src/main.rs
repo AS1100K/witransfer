@@ -44,7 +44,7 @@ fn main() {
             discover(*port)
         }
         Commands::Cores => {
-            println!("This machines has {} cores/threads.", { num_cpus::get() })
+            println!("This machines has {} cores/threads.", { num_cpus::get() });
         }
         _ => println!("Doing something else."),
     }
