@@ -15,11 +15,8 @@ struct Cli {
 enum Commands {
     /// Discover other devices on the same network
     Discover {
-        /// Address on which you will be receiving
-        #[arg(default_value_t = ("0.0.0.0".to_string()))]
-        receiving_addr: String,
         /// Port on which you will be receiving
-        #[arg(default_value_t = 99)]
+        #[arg(default_value_t = 54321)]
         port: u16,
     },
     Send {
@@ -30,9 +27,9 @@ fn main() {
     let args = Cli::parse();
 
     match &args.command {
-        Commands::Discover{port, receiving_addr} => {
-            println!("Discovering... {receiving_addr}:{port}");
-            discover(receiving_addr, *port)
+        Commands::Discover{port} => {
+            println!("Discovering... on port -> {port}");
+            discover(*port)
         },
         _ => println!("Doing something else.")
     }
