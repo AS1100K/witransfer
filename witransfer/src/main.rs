@@ -8,8 +8,18 @@ use witransfer::networking::discover;
 #[command(version, long_about = None)]
 #[command(propagate_version = true)]
 struct Cli {
+    #[clap(value_enum, default_value_t=Mode::Fast)]
+    mode: Mode,
     #[command(subcommand)]
-    command: Commands
+    command: Commands,
+}
+
+#[derive(clap::ValueEnum, Clone)]
+enum Mode {
+    /// Fast Mode will use multi-threading if possible.
+    Fast,
+    /// Slow Mode will be single-threaded.
+    Slow,
 }
 
 #[derive(Subcommand)]
