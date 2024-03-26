@@ -1,14 +1,14 @@
-use std::net::{IpAddr, SocketAddr, UdpSocket};
-use serde::{Serialize, Deserialize};
 use log::info;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::net::{IpAddr, SocketAddr, UdpSocket};
+use std::sync::Arc;
+use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 use whoami;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Message<'a> {
     identifier: &'a str,
     device_info: DeviceInfo,
@@ -16,7 +16,7 @@ struct Message<'a> {
     max_threads: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct DeviceInfo {
     real_name: String,
     user_name: String,
@@ -61,18 +61,23 @@ pub fn discover(port: u16) {
         max_threads: num_cpus::get(),
     };
 
+    let socket =
+        Arc::new(UdpSocket::bind(format!("0.0.0.0:{}", port)).expect("Failed to bind to socket"));
+    socket
+        .set_broadcast(true)
+        .expect("Unable to set broadcast option.");
+    let socket_clone = Arc::clone(&socket);
+
+    thread::spawn(move || receive_visibility_message(socket_clone));
+
     loop {
-        send_visibility_message(port, &message);
+        send_visibility_message(&socket, port, &message);
         sleep(Duration::from_secs(2));
     }
 }
 
-fn send_visibility_message(port: u16, message: &Message) {
+fn send_visibility_message(socket: &Arc<UdpSocket>, port: u16, message: &Message) {
     let broadcast_addr = SocketAddr::new(IpAddr::V4("255.255.255.255".parse().unwrap()), port);
-    let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind to socket");
-    socket
-        .set_broadcast(true)
-        .expect("Failed to set broadcast option.");
 
     let send_buf = socket.send_to(&message.as_bytes(), broadcast_addr);
 
@@ -81,5 +86,32 @@ fn send_visibility_message(port: u16, message: &Message) {
             info!("Sent packet size: {}", buf);
         }
         Err(e) => panic!("{}", e),
+    }
+}
+
+fn receive_visibility_message(socket: Arc<UdpSocket>) {
+    info!("Awaiting for responses");
+    socket
+        .set_read_timeout(Some(Duration::from_secs(50)))
+        .expect("Failed to set read timeout");
+
+    let mut buf = [0; 1024];
+
+    loop {
+        match socket.recv_from(&mut buf) {
+            Ok((n, _addr)) => {
+                let data = &buf[..n];
+                // println!("Received {} bytes from {}: {:?}", n, addr, data);
+                let message: Message =
+                    serde_json::from_slice(data).expect("Unable to read the message.");
+                println!("{:#?}", message);
+                // Clear the buffer
+                buf = [0; 1024];
+            }
+            Err(e) => {
+                eprintln!("Error receiving data: {}", e);
+                break; // Exit the loop on error
+            }
+        }
     }
 }
