@@ -37,7 +37,7 @@ impl<'a> Message<'a> {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
 /// use witransfer::networking::discover;
 ///
 /// let port: u16 = 54321;
