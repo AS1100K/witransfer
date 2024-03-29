@@ -7,8 +7,11 @@ use std::sync::{
     mpsc::{self, Receiver, Sender},
     Arc, Mutex,
 };
-use std::thread::{self, sleep};
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    thread::{self, sleep},
+    time::Duration,
+};
 use whoami;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -72,7 +75,7 @@ pub fn discover(port: u16) {
     let socket_clone = Arc::clone(&socket);
     let (tx, rx) = mpsc::channel();
 
-    let devices: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let devices: Arc<Mutex<BTreeMap<IpAddr, String>>> = Arc::new(Mutex::new(BTreeMap::new()));
     let devices_clone = Arc::clone(&devices);
 
     let receive_handle = thread::spawn(move || receive_visibility_message(socket_clone, tx));
@@ -151,23 +154,27 @@ fn receive_visibility_message(socket: Arc<UdpSocket>, tx: Sender<Message>) {
 }
 
 // Process/filter the message received from other thread
-fn filter_response(devices: Arc<Mutex<Vec<String>>>, rx: Receiver<Message>) {
+fn filter_response(devices: Arc<Mutex<BTreeMap<IpAddr, String>>>, rx: Receiver<Message>) {
     let my_ip = local_ip_address::local_ip().unwrap();
+    // TODO: Remove device if it goes out of scope
     loop {
         match rx.recv() {
             Ok(message) => {
-                if message.identifier == "WiTransfer".to_string() && message.ip_addr != my_ip {
+                if message.identifier == "WiTransfer".to_string()
+                    && message.ip_addr != my_ip
+                    && !devices.lock().unwrap().contains_key(&message.ip_addr)
+                {
                     // TODO: Logic for what to show user.
-                    devices.lock().unwrap().push(format!(
-                        "{} - {}",
-                        message.device_info.real_name, message.device_info.device_name
-                    ));
+                    devices.lock().unwrap().insert(
+                        message.ip_addr,
+                        format!(
+                            "{} - {}",
+                            message.device_info.real_name, message.device_info.device_name
+                        ),
+                    );
 
                     // Printing for Debuging purposes.
-                    println!(
-                        "{} - {}",
-                        message.device_info.real_name, message.device_info.device_name
-                    )
+                    println!("{:#?}", devices.lock().unwrap())
                 }
             }
             _ => continue,
