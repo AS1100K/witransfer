@@ -72,16 +72,24 @@ pub fn discover(port: u16) {
     let socket_clone = Arc::clone(&socket);
     let (tx, rx) = mpsc::channel();
 
-    thread::spawn(move || receive_visibility_message(socket_clone, tx));
-
     let devices: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     let devices_clone = Arc::clone(&devices);
-    thread::spawn(move || filter_response(devices_clone, rx));
 
-    thread::spawn(move || loop {
-        send_visibility_message(&socket, port, &message);
-        sleep(Duration::from_secs(2));
-    });
+    let receive_handle = thread::spawn(move || receive_visibility_message(socket_clone, tx));
+    let filter_handle = thread::spawn(move || filter_response(devices_clone, rx));
+    let send_handle = thread::spawn(move || send_visibility_message(&socket, port, &message));
+
+    send_handle
+        .join()
+        .expect("Unable to create thread to send visibility message.");
+
+    receive_handle
+        .join()
+        .expect("Unable to create thread to receive visibility message.");
+
+    filter_handle
+        .join()
+        .expect("Unable to create thread to filter message.");
 
     // TODO: Make user select which device they want to connect with.
 }
@@ -93,20 +101,24 @@ fn send_visibility_message(socket: &Arc<UdpSocket>, port: u16, message: &Message
     // TODO: Optimize and reduce socket message if large
     let send_buf = socket.send_to(&message.as_bytes(), broadcast_addr);
 
-    match send_buf {
-        Ok(buf) => {
-            info!("Sent packet size: {}", buf);
+    loop {
+        match send_buf {
+            Ok(buf) => {
+                info!("Sent packet size: {}", buf);
+            }
+            Err(e) => panic!("{}", e),
         }
-        Err(e) => panic!("{}", e),
+        sleep(Duration::from_secs(2));
     }
 }
 
 // Receive visibility message and send message to another thread for processing.
 fn receive_visibility_message(socket: Arc<UdpSocket>, tx: Sender<Message>) {
     info!("Awaiting for responses");
-    socket
-        .set_read_timeout(Some(Duration::from_secs(50)))
-        .expect("Failed to set read timeout");
+    if let Err(e) = socket.set_read_timeout(Some(Duration::from_secs(50))) {
+        eprintln!("Unable to set read timeout to 50 sec. Err -> {}", e);
+        return;
+    }
 
     let mut buf = [0; 1024];
 
@@ -114,10 +126,18 @@ fn receive_visibility_message(socket: Arc<UdpSocket>, tx: Sender<Message>) {
         match socket.recv_from(&mut buf) {
             Ok((n, _addr)) => {
                 let data = &buf[..n];
-                // println!("Received {} bytes from {}: {:?}", n, addr, data);
-                let message: Message =
-                    serde_json::from_slice(data).expect("Unable to read the message.");
-                tx.send(message).unwrap();
+
+                match serde_json::from_slice(data) {
+                    Ok(message) => {
+                        if let Err(e) = tx.send(message) {
+                            eprintln!("Unable to send message to filtering thread. Err -> {}", e)
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error deserializing message: {}", e);
+                        continue;
+                    }
+                };
                 // Clear the buffer
                 buf = [0; 1024];
             }
@@ -131,17 +151,22 @@ fn receive_visibility_message(socket: Arc<UdpSocket>, tx: Sender<Message>) {
 
 // Process/filter the message received from other thread
 fn filter_response(devices: Arc<Mutex<Vec<String>>>, rx: Receiver<Message>) {
+    let my_ip = local_ip_address::local_ip().unwrap();
     loop {
         match rx.recv() {
             Ok(message) => {
-                if message.identifier == "WiTransfer".to_string()
-                && message.ip_addr != local_ip_address::local_ip().unwrap()
-                {
+                if message.identifier == "WiTransfer".to_string() && message.ip_addr != my_ip {
                     // TODO: Logic for what to show user.
                     devices.lock().unwrap().push(format!(
                         "{} - {}",
                         message.device_info.real_name, message.device_info.device_name
                     ));
+
+                    // Printing for Debuging purposes.
+                    println!(
+                        "{} - {}",
+                        message.device_info.real_name, message.device_info.device_name
+                    )
                 }
             }
             _ => continue,
