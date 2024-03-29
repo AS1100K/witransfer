@@ -99,9 +99,10 @@ fn send_visibility_message(socket: &Arc<UdpSocket>, port: u16, message: &Message
     let broadcast_addr = SocketAddr::new(IpAddr::V4("255.255.255.255".parse().unwrap()), port);
 
     // TODO: Optimize and reduce socket message if large
-    let send_buf = socket.send_to(&message.as_bytes(), broadcast_addr);
 
     loop {
+        let send_buf = socket.send_to(&message.as_bytes(), broadcast_addr);
+
         match send_buf {
             Ok(buf) => {
                 info!("Sent packet size: {}", buf);
