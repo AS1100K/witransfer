@@ -33,6 +33,7 @@ enum Commands {
     Send {
         path: std::path::PathBuf,
     },
+    /// Get the number of cores/threads this device supports.
     Cores,
 }
 fn main() {
