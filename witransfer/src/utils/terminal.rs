@@ -9,7 +9,8 @@ where
     K: Ord,
 {
     stdout: Stdout,
-    data: BTreeMap<K, T>,
+    /// > NOTE: Any modification to `BTreeMap` will not update the terminal directly.
+    pub data: BTreeMap<K, T>,
     background_color: Option<Color>,
     prev_lines: u32,
 }
