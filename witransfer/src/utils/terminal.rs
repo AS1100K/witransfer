@@ -46,6 +46,25 @@ where
         }
     }
 
+    /// Create a terminal instance with a promt question.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use witransfer::terminal::Terminal;
+    /// // --snip--
+    /// # let mut terminal: Terminal<String, String> = Terminal::new(None);
+    /// terminal.with_promt("Please select the device:".to_string()).unwrap();
+    /// ```
+    pub fn with_promt(&mut self, promt: String) -> Result<(), &'static str> {
+        if self.stdout.write_all((promt + "\n").as_bytes()).is_ok() {
+            // self.prev_lines += 1;
+            Ok(())
+        } else {
+            Err("Unable to write line in the terminal.")
+        }
+    }
+
     /// Inserts a new value to `BTreeMap` if it doesn't exist.
     ///
     /// Here, `identifier` is the `key` of `BTreeMap`
