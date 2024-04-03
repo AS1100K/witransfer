@@ -74,7 +74,9 @@ where
     /// ```rust
     /// use witransfer::terminal::{Terminal, Color};
     ///
-    /// let mut terminal: Terminal<String> = Terminal::new().with_background_color(Color::White).with_text_color(Color::Red);
+    /// let mut terminal: Terminal<String> = Terminal::new()
+    ///     .with_background_color(Color::White)
+    ///     .with_text_color(Color::Red);
     /// ```
     pub fn with_text_color(mut self, text_color: Color) -> Terminal<K> {
         self.stdout
