@@ -1,8 +1,9 @@
 //! Dynamic User Selectable List using `BTreeMap`
 pub use crossterm::style::Color;
-use crossterm::{cursor, queue, style, ExecutableCommand, QueueableCommand};
+use crossterm::{QueueableCommand};
 use std::collections::BTreeMap;
 use std::io::{stdout, Stdout, Write};
+use crossterm::style::SetBackgroundColor;
 
 pub struct Terminal<K>
 where
@@ -11,7 +12,6 @@ where
     stdout: Stdout,
     /// > NOTE: Any modification to `BTreeMap` will not update the terminal directly.
     pub data: BTreeMap<K, String>,
-    background_color: Option<Color>,
     prev_lines: u8,
 }
 
@@ -28,22 +28,26 @@ where
     /// ```rust
     /// use witransfer::terminal::Terminal;
     ///
-    /// let terminal: Terminal<String> = Terminal::new(None);
+    /// let terminal: Terminal<String> = Terminal::new();
     /// ```
     ///
     /// Terminal with background color `Cyan`
     /// ```rust
     /// use witransfer::terminal::{Terminal, Color};
     ///
-    /// let terminal: Terminal<String> = Terminal::new(Some(Color::Cyan));
+    /// let terminal: Terminal<String> = Terminal::new().with_background_color(Color::Cyan);
     /// ```
-    pub fn new(background_color: Option<Color>) -> Terminal<K> {
+    pub fn new() -> Terminal<K> {
         Terminal {
             stdout: stdout(),
             data: BTreeMap::new(),
-            background_color,
             prev_lines: 0,
         }
+    }
+
+    pub fn with_background_color(mut self, background_color: Color) -> Terminal<K> {
+        self.stdout.queue(SetBackgroundColor(background_color)).expect("Unable to customize Terminal.");
+        self
     }
 
     /// Create a terminal instance with a prompt question.
@@ -53,7 +57,7 @@ where
     /// ```rust
     /// use witransfer::terminal::Terminal;
     /// // --snip--
-    /// # let mut terminal: Terminal<String> = Terminal::new(None);
+    /// # let mut terminal: Terminal<String> = Terminal::new();
     /// terminal.with_prompt("Please select the device:".to_string()).unwrap();
     /// ```
     pub fn with_prompt(&mut self, prompt: String) -> Result<(), &'static str> {
@@ -77,7 +81,7 @@ where
     /// ```rust
     /// use witransfer::terminal::Terminal;
     ///
-    /// let mut terminal: Terminal<usize> = Terminal::new(None);
+    /// let mut terminal: Terminal<usize> = Terminal::new();
     /// terminal.insert(1, "i am here.".to_string()).unwrap();
     /// assert_eq!(terminal.get(&1).unwrap(), &"i am here.");
     /// ```
@@ -101,7 +105,7 @@ where
     /// ```rust
     /// use witransfer::terminal::Terminal;
     ///
-    /// let mut terminal: Terminal<usize> = Terminal::new(None);
+    /// let mut terminal: Terminal<usize> = Terminal::new();
     /// terminal.insert(1, "Hello World!".to_string()).unwrap();
     /// assert_eq!(terminal.get(&1).unwrap(), &"Hello World!".to_string());
     ///
@@ -121,7 +125,7 @@ where
     /// ```rust, should_panic
     /// use witransfer::terminal::Terminal;
     ///
-    /// let mut terminal: Terminal<&str> = Terminal::new(None);
+    /// let mut terminal: Terminal<&str> = Terminal::new();
     /// terminal.remove("Hello, I was there.").unwrap();
     /// ```
     pub fn remove(&mut self, identifier: K) -> Result<String, &'static str> {
@@ -139,7 +143,7 @@ where
     /// # Examples
     /// ```rust
     /// use witransfer::terminal::Terminal;
-    /// let mut terminal: Terminal<usize> = Terminal::new(None);
+    /// let mut terminal: Terminal<usize> = Terminal::new();
     /// terminal.insert(1, "Two".to_string()).unwrap();
     ///
     /// assert_eq!(terminal.get(&1).unwrap(), &"Two".to_string());
