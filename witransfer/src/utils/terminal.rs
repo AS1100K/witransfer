@@ -21,8 +21,6 @@ where
 {
     /// Returns an instance of Terminal
     ///
-    /// Here `background_color` is the background color for the terminal text.
-    ///
     /// # Examples
     /// Terminal with no background color
     /// ```rust
@@ -45,6 +43,18 @@ where
         }
     }
 
+    /// Updates the terminal instance with a specific background color.
+    ///
+    /// Returns itself
+    ///
+    /// # Example
+    ///
+    /// Terminal with background color `Cyan`
+    /// ```rust
+    ///  use witransfer::terminal::{Terminal, Color};
+    ///
+    ///  let terminal: Terminal<String> = Terminal::new().with_background_color(Color::Cyan);
+    ///  ```
     pub fn with_background_color(mut self, background_color: Color) -> Terminal<K> {
         self.stdout.queue(SetBackgroundColor(background_color)).expect("Unable to customize Terminal.");
         self
