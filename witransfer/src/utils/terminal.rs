@@ -1,9 +1,11 @@
 //! Dynamic User Selectable List using `BTreeMap`
 pub use crossterm::style::Color;
-use crossterm::{QueueableCommand};
+use crossterm::{
+    style::{SetBackgroundColor, SetForegroundColor},
+    QueueableCommand,
+};
 use std::collections::BTreeMap;
 use std::io::{stdout, Stdout, Write};
-use crossterm::style::SetBackgroundColor;
 
 pub struct Terminal<K>
 where
@@ -56,7 +58,28 @@ where
     ///  let terminal: Terminal<String> = Terminal::new().with_background_color(Color::Cyan);
     ///  ```
     pub fn with_background_color(mut self, background_color: Color) -> Terminal<K> {
-        self.stdout.queue(SetBackgroundColor(background_color)).expect("Unable to customize Terminal.");
+        self.stdout
+            .queue(SetBackgroundColor(background_color))
+            .expect("Unable to customize Terminal.");
+        self
+    }
+
+    /// Updates the terminal instance with a specific text color.
+    ///
+    /// Returns itself
+    ///
+    /// # Example
+    ///
+    /// Terminal with text color `Red` and background `White`.
+    /// ```rust
+    /// use witransfer::terminal::{Terminal, Color};
+    ///
+    /// let mut terminal: Terminal<String> = Terminal::new().with_background_color(Color::White).with_text_color(Color::Red);
+    /// ```
+    pub fn with_text_color(mut self, text_color: Color) -> Terminal<K> {
+        self.stdout
+            .queue(SetForegroundColor(text_color))
+            .expect("Unable to customize terminal text color.");
         self
     }
 
@@ -99,7 +122,11 @@ where
         if self.data.contains_key(&identifier) {
             Err("Key Already exists.")
         } else {
-            if !self.stdout.write_all((content.to_owned() + "\n").as_bytes()).is_ok() {
+            if !self
+                .stdout
+                .write_all((content.to_owned() + "\n").as_bytes())
+                .is_ok()
+            {
                 eprintln!("Unable to print information in terminal.")
             }
             self.prev_lines += 1;
