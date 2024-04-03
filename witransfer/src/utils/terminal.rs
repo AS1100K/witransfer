@@ -12,7 +12,7 @@ where
     /// > NOTE: Any modification to `BTreeMap` will not update the terminal directly.
     pub data: BTreeMap<K, String>,
     background_color: Option<Color>,
-    prev_lines: u16,
+    prev_lines: u8,
 }
 
 impl<K> Terminal<K>
