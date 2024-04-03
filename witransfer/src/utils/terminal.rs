@@ -12,7 +12,7 @@ where
     /// > NOTE: Any modification to `BTreeMap` will not update the terminal directly.
     pub data: BTreeMap<K, String>,
     background_color: Option<Color>,
-    prev_lines: u32,
+    prev_lines: u16,
 }
 
 impl<K> Terminal<K>
@@ -85,8 +85,10 @@ where
         if self.data.contains_key(&identifier) {
             Err("Key Already exists.")
         } else {
-            // let mut content_two = &content;
-            self.stdout.write_all((content.to_owned() + "\n").as_bytes()).expect("TODO: panic message");
+            if !self.stdout.write_all((content.to_owned() + "\n").as_bytes()).is_ok() {
+                eprintln!("Unable to print information in terminal.")
+            }
+            self.prev_lines += 1;
             self.data.insert(identifier, content);
             Ok(())
         }
