@@ -4,18 +4,18 @@ use crossterm::{cursor, queue, style, ExecutableCommand, QueueableCommand};
 use std::collections::BTreeMap;
 use std::io::{stdout, Stdout, Write};
 
-pub struct Terminal<K, T>
+pub struct Terminal<K>
 where
     K: Ord,
 {
     stdout: Stdout,
     /// > NOTE: Any modification to `BTreeMap` will not update the terminal directly.
-    pub data: BTreeMap<K, T>,
+    pub data: BTreeMap<K, String>,
     background_color: Option<Color>,
     prev_lines: u32,
 }
 
-impl<K, T> Terminal<K, T>
+impl<K> Terminal<K>
 where
     K: Ord,
 {
@@ -28,16 +28,16 @@ where
     /// ```rust
     /// use witransfer::terminal::Terminal;
     ///
-    /// let terminal: Terminal<String, String> = Terminal::new(None);
+    /// let terminal: Terminal<String> = Terminal::new(None);
     /// ```
     ///
     /// Terminal with background color `Cyan`
     /// ```rust
     /// use witransfer::terminal::{Terminal, Color};
     ///
-    /// let terminal: Terminal<String, String> = Terminal::new(Some(Color::Cyan));
+    /// let terminal: Terminal<String> = Terminal::new(Some(Color::Cyan));
     /// ```
-    pub fn new(background_color: Option<Color>) -> Terminal<K, T> {
+    pub fn new(background_color: Option<Color>) -> Terminal<K> {
         Terminal {
             stdout: stdout(),
             data: BTreeMap::new(),
@@ -46,18 +46,18 @@ where
         }
     }
 
-    /// Create a terminal instance with a promt question.
+    /// Create a terminal instance with a prompt question.
     ///
     /// # Example
     ///
     /// ```rust
     /// use witransfer::terminal::Terminal;
     /// // --snip--
-    /// # let mut terminal: Terminal<String, String> = Terminal::new(None);
-    /// terminal.with_promt("Please select the device:".to_string()).unwrap();
+    /// # let mut terminal: Terminal<String> = Terminal::new(None);
+    /// terminal.with_prompt("Please select the device:".to_string()).unwrap();
     /// ```
-    pub fn with_promt(&mut self, promt: String) -> Result<(), &'static str> {
-        if self.stdout.write_all((promt + "\n").as_bytes()).is_ok() {
+    pub fn with_prompt(&mut self, prompt: String) -> Result<(), &'static str> {
+        if self.stdout.write_all((prompt + "\n").as_bytes()).is_ok() {
             // self.prev_lines += 1;
             Ok(())
         } else {
@@ -77,14 +77,16 @@ where
     /// ```rust
     /// use witransfer::terminal::Terminal;
     ///
-    /// let mut terminal: Terminal<usize, &str> = Terminal::new(None);
-    /// terminal.insert(1, "i am here.").unwrap();
+    /// let mut terminal: Terminal<usize> = Terminal::new(None);
+    /// terminal.insert(1, "i am here.".to_string()).unwrap();
     /// assert_eq!(terminal.get(&1).unwrap(), &"i am here.");
     /// ```
-    pub fn insert(&mut self, identifier: K, content: T) -> Result<(), &'static str> {
+    pub fn insert(&mut self, identifier: K, content: String) -> Result<(), &'static str> {
         if self.data.contains_key(&identifier) {
             Err("Key Already exists.")
         } else {
+            // let mut content_two = &content;
+            self.stdout.write_all((content.to_owned() + "\n").as_bytes()).expect("TODO: panic message");
             self.data.insert(identifier, content);
             Ok(())
         }
@@ -97,14 +99,14 @@ where
     /// ```rust
     /// use witransfer::terminal::Terminal;
     ///
-    /// let mut terminal: Terminal<usize, &str> = Terminal::new(None);
-    /// terminal.insert(1, "Hello World!").unwrap();
-    /// assert_eq!(terminal.get(&1).unwrap(), &"Hello World!");
+    /// let mut terminal: Terminal<usize> = Terminal::new(None);
+    /// terminal.insert(1, "Hello World!".to_string()).unwrap();
+    /// assert_eq!(terminal.get(&1).unwrap(), &"Hello World!".to_string());
     ///
-    /// terminal.modify(1, "Hello, I was there.").unwrap();
-    /// assert_eq!(terminal.get(&1).unwrap(), &"Hello, I was there.");
+    /// terminal.modify(1, "Hello, I was there.".to_string()).unwrap();
+    /// assert_eq!(terminal.get(&1).unwrap(), &"Hello, I was there.".to_string());
     /// ```
-    pub fn modify(&mut self, identifier: K, content: T) -> Result<(), &'static str> {
+    pub fn modify(&mut self, identifier: K, content: String) -> Result<(), &'static str> {
         self.data.insert(identifier, content);
         Ok(())
     }
@@ -117,10 +119,10 @@ where
     /// ```rust, should_panic
     /// use witransfer::terminal::Terminal;
     ///
-    /// let mut terminal: Terminal<&str, &str> = Terminal::new(None);
+    /// let mut terminal: Terminal<&str> = Terminal::new(None);
     /// terminal.remove("Hello, I was there.").unwrap();
     /// ```
-    pub fn remove(&mut self, identifier: K) -> Result<T, &'static str> {
+    pub fn remove(&mut self, identifier: K) -> Result<String, &'static str> {
         match self.data.remove(&identifier) {
             Some(content) => Ok(content),
             None => Err("Identifier doesn't exist in the map."),
@@ -135,12 +137,12 @@ where
     /// # Examples
     /// ```rust
     /// use witransfer::terminal::Terminal;
-    /// let mut terminal: Terminal<usize, usize> = Terminal::new(None);
-    /// terminal.insert(1, 2).unwrap();
+    /// let mut terminal: Terminal<usize> = Terminal::new(None);
+    /// terminal.insert(1, "Two".to_string()).unwrap();
     ///
-    /// assert_eq!(terminal.get(&1).unwrap(), &2);
+    /// assert_eq!(terminal.get(&1).unwrap(), &"Two".to_string());
     /// ```
-    pub fn get(&mut self, identifier: &K) -> Result<&T, &'static str> {
+    pub fn get(&mut self, identifier: &K) -> Result<&String, &'static str> {
         match self.data.get(identifier) {
             Some(content) => Ok(content),
             None => Err("Unable to get the value of designated identifier"),
