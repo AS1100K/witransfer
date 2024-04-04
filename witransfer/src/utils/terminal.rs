@@ -1,8 +1,12 @@
 //! Dynamic User Selectable List using `BTreeMap`
 pub use crossterm::style::Color;
 use crossterm::{
+    cursor::{position as cursor_position, MoveTo},
+    style::Print,
+};
+use crossterm::{
     style::{SetBackgroundColor, SetForegroundColor},
-    QueueableCommand,
+    ExecutableCommand, QueueableCommand,
 };
 use std::collections::BTreeMap;
 use std::io::{stdout, Stdout, Write};
@@ -14,7 +18,9 @@ where
     stdout: Stdout,
     /// > NOTE: Any modification to `BTreeMap` will not update the terminal directly.
     pub data: BTreeMap<K, String>,
-    prev_lines: u8,
+    initial_position: (u16, u16),
+    total_lines: u8,
+    current_line: u8,
 }
 
 impl<K> Terminal<K>
@@ -41,7 +47,9 @@ where
         Terminal {
             stdout: stdout(),
             data: BTreeMap::new(),
-            prev_lines: 0,
+            initial_position: cursor_position().unwrap(),
+            total_lines: 0,
+            current_line: 0,
         }
     }
 
@@ -126,12 +134,16 @@ where
         } else {
             if !self
                 .stdout
-                .write_all((content.to_owned() + "\n").as_bytes())
+                .execute(MoveTo(
+                    self.initial_position.0,
+                    self.initial_position.1 + self.total_lines as u16 + 1,
+                )).unwrap()
+                .execute(Print(&content))
                 .is_ok()
             {
-                eprintln!("Unable to print information in terminal.")
+                return Err("Unable to print output in the terminal.")
             }
-            self.prev_lines += 1;
+            self.total_lines += 1;
             self.data.insert(identifier, content);
             Ok(())
         }
