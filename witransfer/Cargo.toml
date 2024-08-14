@@ -1,13 +1,24 @@
 [package]
 name = "witransfer"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Aditya Kumar <theadityakumardeveloper@gmail.com>"]
 description = "A CLI Tool to transer files over wi-fi"
 repository = "https://github.com/adityajideveloper/witransfer"
 license = "MIT"
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = { version = "4.5.3", features = ["derive"] }
+num_cpus = "1.16"
+local-ip-address = "0.6.1"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+whoami = "1.5.1"
+log = "0.4.21"
+crossterm = "0.27.0"
+
+[profile.release]
+lto = true
